@@ -1,15 +1,16 @@
-#include<bits/stdc++.h>
+﻿#include<bits/stdc++.h>
 
 class AVLTree {
 private:
     struct Node {
         int key;
         int height;
+        int size;
         Node* left;
         Node* right;
 
         explicit Node(int k)
-            : key(k), height(1), left(nullptr), right(nullptr) {}
+            : key(k), height(1), size(1), left(nullptr), right(nullptr) {}
     };
 
     Node* root = nullptr;
@@ -21,8 +22,19 @@ private:
         return node->height;
     }
 
-    void updateHeight(Node* node) {
+    int getSize(Node* node) const {
+        if (node == nullptr) {
+            return 0;
+        }
+        return node->size;
+    }
+
+    void pull(Node* node) {
+        if (node == nullptr) {
+            return;
+        }
         node->height = std::max(getHeight(node->left), getHeight(node->right)) + 1;
+        node->size = getSize(node->left) + getSize(node->right) + 1;
     }
 
     int getBalance(Node* node) const {
@@ -39,8 +51,8 @@ private:
         x->right = y;
         y->left = t2;
 
-        updateHeight(y);
-        updateHeight(x);
+        pull(y);
+        pull(x);
         return x;
     }
 
@@ -51,8 +63,8 @@ private:
         y->left = x;
         x->right = t2;
 
-        updateHeight(x);
-        updateHeight(y);
+        pull(x);
+        pull(y);
         return y;
     }
 
@@ -69,7 +81,7 @@ private:
             return node;
         }
 
-        updateHeight(node);
+        pull(node);
         int balance = getBalance(node);
 
         if (balance > 1 && key < node->left->key) {
@@ -121,7 +133,7 @@ private:
             node->right = deleteNode(node->right, t->key);
         }
 
-        updateHeight(node);
+        pull(node);
         int balance = getBalance(node);
 
         if (balance > 1 && getBalance(node->left) >= 0) {
@@ -156,6 +168,31 @@ private:
             return contains(node->left, key);
         }
         return contains(node->right, key);
+    }
+
+    int orderOfKey(Node* node, int key) const {
+        if (node == nullptr) {
+            return 0;
+        }
+        if (key <= node->key) {
+            return orderOfKey(node->left, key);
+        }
+        return getSize(node->left) + 1 + orderOfKey(node->right, key);
+    }
+
+    Node* findByOrder(Node* node, int k) const {
+        if (node == nullptr || k < 0 || k >= getSize(node)) {
+            return nullptr;
+        }
+
+        int leftSize = getSize(node->left);
+        if (k < leftSize) {
+            return findByOrder(node->left, k);
+        }
+        if (k == leftSize) {
+            return node;
+        }
+        return findByOrder(node->right, k - leftSize - 1);
     }
 
     void preorder(Node* node) const {
@@ -202,6 +239,23 @@ public:
         return contains(root, key);
     }
 
+    int order_of_key(int key) const {
+        return orderOfKey(root, key);
+    }
+
+    bool find_by_order(int k, int& result) const {
+        Node* node = findByOrder(root, k);
+        if (node == nullptr) {
+            return false;
+        }
+        result = node->key;
+        return true;
+    }
+
+    int size() const {
+        return getSize(root);
+    }
+
     void preorder() const {
         preorder(root);
     }
@@ -218,27 +272,36 @@ int main() {
         tree.insert(x);
     }
 
-    std::cout << "initial preorder: ";
-    tree.preorder();
-    std::cout << "\n";
-
     std::cout << "initial inorder: ";
     tree.inorder();
-    std::cout << "\n\n";
+    std::cout << "\n";
 
+    std::cout << "size: " << tree.size() << "\n";
     std::cout << "contains 25: " << (tree.contains(25) ? "true" : "false") << "\n";
-    std::cout << "contains 99: " << (tree.contains(99) ? "true" : "false") << "\n\n";
+    std::cout << "contains 99: " << (tree.contains(99) ? "true" : "false") << "\n";
+    std::cout << "order_of_key(18): " << tree.order_of_key(18) << "\n";
+    std::cout << "order_of_key(19): " << tree.order_of_key(19) << "\n";
 
-    int deleteValues[] = {3, 5, 10, 20, 30, 40, 50};
-    for (int x : deleteValues) {
-        tree.erase(x);
-        std::cout << "after delete " << x << " preorder: ";
-        tree.preorder();
-        std::cout << "\n";
+    for (int k = 0; k < tree.size(); ++k) {
+        int value = 0;
+        if (tree.find_by_order(k, value)) {
+            std::cout << "find_by_order(" << k << "): " << value << "\n";
+        }
+    }
 
-        std::cout << "after delete " << x << " inorder: ";
-        tree.inorder();
-        std::cout << "\n\n";
+    tree.erase(20);
+    tree.erase(5);
+    tree.erase(30);
+
+    std::cout << "\nafter deletions inorder: ";
+    tree.inorder();
+    std::cout << "\n";
+    std::cout << "size: " << tree.size() << "\n";
+    std::cout << "order_of_key(28): " << tree.order_of_key(28) << "\n";
+
+    int value = 0;
+    if (tree.find_by_order(3, value)) {
+        std::cout << "find_by_order(3): " << value << "\n";
     }
 
     return 0;
